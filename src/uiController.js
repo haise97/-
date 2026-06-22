@@ -20,7 +20,6 @@ export const createUiController = ({ settings, scene, onModeChange, onGestureTog
     resetView: document.querySelector('#reset-view'),
     toggleGesture: document.querySelector('#toggle-gesture'),
     gestureLabel: document.querySelector('#gesture-label'),
-    cameraPreview: document.querySelector('#camera-preview'),
   }
 
   const syncControls = (nextSettings = settings) => {
@@ -35,7 +34,7 @@ export const createUiController = ({ settings, scene, onModeChange, onGestureTog
       button.classList.toggle('active', button.dataset.mode === nextSettings.mode)
     })
     document.documentElement.dataset.theme = nextSettings.theme
-    elements.hintText.textContent = `${THEMES[nextSettings.theme]?.name || THEMES.neon.name} · 双击重置视角 · 拖拽/触摸旋转 · 捏合缩放`
+    elements.hintText.textContent = `${THEMES[nextSettings.theme]?.name || THEMES.neon.name} | 双击重置视角 | 拖拽旋转 | 捏合缩放`
   }
 
   elements.modeButtons.forEach((button) => {
@@ -92,18 +91,16 @@ export const createUiController = ({ settings, scene, onModeChange, onGestureTog
     if (elements.toggleGesture.disabled) return
     elements.toggleGesture.disabled = true
     const originalText = elements.toggleGesture.textContent
-    elements.toggleGesture.textContent = '正在启动…'
+    elements.toggleGesture.textContent = '正在启动...'
     elements.gestureLabel.textContent = '正在请求权限'
 
     try {
       const enabled = await onGestureToggle()
       settings.gestureEnabled = enabled
       elements.toggleGesture.textContent = enabled ? '关闭手势' : '开启手势'
-      elements.cameraPreview.classList.toggle('visible', enabled)
-    } catch (error) {
+    } catch {
       settings.gestureEnabled = false
       elements.toggleGesture.textContent = originalText
-      elements.cameraPreview.classList.remove('visible')
       elements.gestureLabel.textContent = '手势启动失败'
     } finally {
       elements.toggleGesture.disabled = false
@@ -115,7 +112,6 @@ export const createUiController = ({ settings, scene, onModeChange, onGestureTog
     if (statusText) elements.statusText.textContent = statusText
     if (gestureLabel) elements.gestureLabel.textContent = gestureLabel
     if (typeof gestureEnabled === 'boolean') {
-      elements.cameraPreview.classList.toggle('visible', gestureEnabled)
       elements.toggleGesture.textContent = gestureEnabled ? '关闭手势' : '开启手势'
     }
   }

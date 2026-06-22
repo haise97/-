@@ -28,11 +28,16 @@ const gesture = new GestureController({
   video,
   onSignal: (signal) => {
     scene.applyGesture(signal)
+    if (signal.paused) {
+      updateStatus({ gestureLabel: '拳头：动画已暂停' })
+    } else {
+      updateStatus({ gestureLabel: signal.label })
+    }
   },
   onStatus: (signal) => {
     updateStatus({
       gestureLabel: signal.label,
-      statusText: signal.active ? '摄像头手势正在影响粒子场。' : '鼠标、触摸和摄像头手势可随时切换使用。',
+      statusText: signal.active ? '摄像头已连接，正在识别手势。' : '拖拽旋转，滚轮缩放，点击开启手势。',
     })
   },
 })
@@ -54,4 +59,4 @@ ui = createUiController({
 })
 
 scene.start()
-updateStatus({ statusText: '拖拽旋转，滚轮缩放，双击重置；也可以开启摄像头手势。' })
+updateStatus({ statusText: '拖拽旋转，滚轮缩放，点击开启手势。' })

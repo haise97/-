@@ -272,42 +272,6 @@ select {
   line-height: 1.55;
 }
 
-.camera-preview {
-  right: 28px;
-  bottom: 28px;
-  width: 176px;
-  height: 126px;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: rgba(0, 0, 0, 0.42);
-  box-shadow: 0 0 34px var(--shadow);
-  transform: translateY(12px);
-  transition: opacity 220ms ease, transform 220ms ease;
-}
-
-.camera-preview.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.camera-preview video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1);
-  opacity: 0.75;
-}
-
-.scan-line {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent, rgba(92, 247, 255, 0.28), transparent);
-  animation: scan 2.6s linear infinite;
-}
-
 .floating-panel-button {
   top: 24px;
   right: 24px;

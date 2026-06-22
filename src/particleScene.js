@@ -34,6 +34,7 @@ export class ParticleScene {
     this.touchDistance = 0
     this.transition = null
     this.disturbance = 0
+    this.paused = false
     this.heroineFx = {
       spread: 0,
       spreadTarget: 0,
@@ -433,11 +434,17 @@ export class ParticleScene {
 
   applyGesture(signal) {
     if (!signal?.active) return
+    this.paused = Boolean(signal.paused)
     const motion = applyGestureMotion({ x: this.rotationVelocity.x, y: this.rotationVelocity.y }, signal)
     this.rotationVelocity.x = motion.velocity.x
     this.rotationVelocity.y = motion.velocity.y
     this.targetZoom = clamp(this.targetZoom - motion.zoomDelta, 3.6, 15)
     this.disturbance = Math.max(this.disturbance, motion.disturbance)
+    if (signal.action === 'zoomIn') {
+      this.targetZoom = clamp(this.targetZoom - 0.5, 3.6, 15)
+    } else if (signal.action === 'shrink') {
+      this.targetZoom = clamp(this.targetZoom + 0.45, 3.6, 15)
+    }
 
     if (this.settings.mode === 'heroine') {
       const strength = clamp(signal.effectStrength ?? 0, 0, 1)
@@ -533,14 +540,18 @@ export class ParticleScene {
     const elapsed = this.clock.getElapsedTime()
     this.currentZoom += (this.targetZoom - this.currentZoom) * 0.08
     this.camera.position.z = this.currentZoom
-    this.rotationVelocity.multiplyScalar(this.isDragging ? 0.96 : 0.985)
-    this.subjectGroup.rotation.x += this.rotationVelocity.x * this.settings.speed
-    this.subjectGroup.rotation.y += this.rotationVelocity.y * this.settings.speed
-    this.subjectGroup.rotation.z = Math.sin(elapsed * 0.18) * 0.06
-    this.points.rotation.z = Math.sin(elapsed * 0.28) * 0.1
-    this.heroineFigure.rotation.y = Math.sin(elapsed * 0.33) * 0.035
-    this.heroineFigure.rotation.x = Math.cos(elapsed * 0.25) * 0.018
-    this.updateHeroineFx(elapsed)
+    if (!this.paused) {
+      this.rotationVelocity.multiplyScalar(this.isDragging ? 0.96 : 0.985)
+      this.subjectGroup.rotation.x += this.rotationVelocity.x * this.settings.speed
+      this.subjectGroup.rotation.y += this.rotationVelocity.y * this.settings.speed
+      this.subjectGroup.rotation.z = Math.sin(elapsed * 0.18) * 0.06
+      this.points.rotation.z = Math.sin(elapsed * 0.28) * 0.1
+      this.heroineFigure.rotation.y = Math.sin(elapsed * 0.33) * 0.035
+      this.heroineFigure.rotation.x = Math.cos(elapsed * 0.25) * 0.018
+      this.updateHeroineFx(elapsed)
+    } else {
+      this.rotationVelocity.set(0, 0)
+    }
 
     if (this.transition) {
       const progress = (performance.now() - this.transition.startedAt) / this.transition.duration

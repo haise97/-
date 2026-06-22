@@ -13,16 +13,32 @@ const applyDeadZone = (value, deadZone = 0.08) => {
 
 const amplify = (value, power = 1.35) => Math.sign(value) * Math.abs(value) ** power
 
-export const createEmptyGestureSignal = (label = '未开启') => ({
-  active: false,
-  rotateX: 0,
-  rotateY: 0,
-  zoomDelta: 0,
-  disturbance: 0,
-  effect: 'idle',
-  effectStrength: 0,
-  label,
-})
+const fingerStates = (landmarks) => {
+  const wrist = landmarks[0]
+  const thumbTip = landmarks[4]
+  const thumbIp = landmarks[3]
+  const indexTip = landmarks[8]
+  const indexPip = landmarks[6]
+  const middleTip = landmarks[12]
+  const middlePip = landmarks[10]
+  const ringTip = landmarks[16]
+  const ringPip = landmarks[14]
+  const pinkyTip = landmarks[20]
+  const pinkyPip = landmarks[18]
+
+  return {
+    thumb: thumbTip.x > thumbIp.x + 0.06 || thumbTip.y < thumbIp.y - 0.03,
+    index: indexTip.y < indexPip.y - 0.025,
+    middle: middleTip.y < middlePip.y - 0.025,
+    ring: ringTip.y < ringPip.y - 0.025,
+    pinky: pinkyTip.y < pinkyPip.y - 0.025,
+  }
+}
+
+const countRaisedFingers = (states) => ['thumb', 'index', 'middle', 'ring', 'pinky'].reduce(
+  (count, key) => count + (states[key] ? 1 : 0),
+  0,
+)
 
 const getPalmCenter = (landmarks) => {
   const wrist = landmarks[0]
@@ -35,50 +51,74 @@ const getPalmCenter = (landmarks) => {
   }
 }
 
+const makeFingerLabel = (raisedCount) => {
+  const labels = ['小指动作', '双指动作', '三指动作', '四指动作', '五指全开']
+  return labels[Math.max(0, Math.min(labels.length - 1, raisedCount - 1))]
+}
+
+export const createEmptyGestureSignal = (label = '未开启') => ({
+  active: false,
+  paused: false,
+  action: 'idle',
+  raisedCount: 0,
+  fingerStates: null,
+  rotateX: 0,
+  rotateY: 0,
+  zoomDelta: 0,
+  disturbance: 0,
+  effect: 'idle',
+  effectStrength: 0,
+  label,
+})
+
 export const mapHandLandmarksToGesture = (landmarks) => {
   if (!Array.isArray(landmarks) || landmarks.length < 21) {
     return createEmptyGestureSignal('未检测到手')
   }
 
-  const wrist = landmarks[0]
-  const thumbTip = landmarks[4]
-  const indexTip = landmarks[8]
-  const middleTip = landmarks[12]
-  const ringTip = landmarks[16]
-  const pinkyTip = landmarks[20]
-  const { x: palmX, y: palmY } = getPalmCenter(landmarks)
-  const pinchDistance = distance2d(thumbTip, indexTip)
-  const spread = [indexTip, middleTip, ringTip, pinkyTip].reduce((total, point) => total + distance2d(wrist, point), 0) / 4
-  const rawRotateY = clamp((palmX - 0.5) * 2.2, -1, 1)
-  const rawRotateX = clamp((0.5 - palmY) * 2.2, -1, 1)
+  const states = fingerStates(landmarks)
+  const raisedCount = countRaisedFingers(states)
+  const palm = getPalmCenter(landmarks)
+  const rawRotateY = clamp((palm.x - 0.5) * 2.2, -1, 1)
+  const rawRotateX = clamp((0.5 - palm.y) * 2.2, -1, 1)
   const rotateY = amplify(applyDeadZone(rawRotateY))
   const rotateX = amplify(applyDeadZone(rawRotateX))
-  const zoomDelta = clamp((pinchDistance - 0.08) * 5, -0.35, 0.5)
-  const disturbance = clamp((spread - 0.18) * 3.2, 0, 1)
-  const spinStrength = clamp((Math.abs(rotateX) + Math.abs(rotateY) - 0.35) * 1.35, 0, 1)
-  const zoomStrength = clamp(Math.abs(zoomDelta) * 2.4, 0, 1)
-  const direction = Math.abs(rotateY) > Math.abs(rotateX)
-    ? (rotateY > 0 ? '右移：Y轴旋转' : '左移：Y轴旋转')
-    : (rotateX > 0 ? '上移：X轴旋转' : '下移：X轴旋转')
-  const effect = zoomStrength > spinStrength ? 'depthPulse' : spinStrength > 0.08 ? 'orbitSpin' : 'idle'
-  const label = effect === 'depthPulse'
-    ? '靠近/远离：同步缩放与呼吸光效'
-    : effect === 'orbitSpin'
-      ? '旋转手势：外圈粒子绕人物旋转'
-      : disturbance > 0.55
-        ? '张开手掌：扰动粒子'
-        : pinchDistance < 0.055
-          ? '捏合：收缩缩放'
-          : direction
+  const pinchDistance = distance2d(landmarks[4], landmarks[8])
+  const tipXs = [landmarks[4].x, landmarks[8].x, landmarks[12].x, landmarks[16].x, landmarks[20].x]
+  const tipSpan = Math.max(...tipXs) - Math.min(...tipXs)
+  const isFist = raisedCount === 0
+  const isOpenPalm = raisedCount === 5 && tipSpan < 0.18
+  const isPinch = states.thumb && pinchDistance < 0.055 && !states.middle && !states.ring && !states.pinky
+
+  let action = 'idle'
+  let label = makeFingerLabel(raisedCount)
+
+  if (isFist) {
+    action = 'pause'
+    label = '拳头：暂停动画'
+  } else if (isOpenPalm) {
+    action = 'zoomIn'
+    label = '五指张开：放大'
+  } else if (isPinch) {
+    action = 'shrink'
+    label = '拇指+食指捏合：缩小'
+  } else {
+    action = `fingers-${raisedCount}`
+    label = makeFingerLabel(raisedCount)
+  }
 
   return {
     active: true,
+    paused: isFist,
+    action,
+    raisedCount,
+    fingerStates: states,
     rotateX,
     rotateY,
-    zoomDelta,
-    disturbance,
-    effect,
-    effectStrength: Math.max(spinStrength, zoomStrength, disturbance * 0.45),
+    zoomDelta: action === 'shrink' ? -0.35 : action === 'zoomIn' ? 0.42 : 0,
+    disturbance: clamp(raisedCount / 5, 0, 1),
+    effect: action === 'zoomIn' ? 'depthPulse' : action === 'shrink' ? 'orbitSpin' : 'idle',
+    effectStrength: action === 'zoomIn' ? 0.8 : action === 'shrink' ? 0.6 : raisedCount / 5,
     label,
   }
 }
@@ -88,31 +128,5 @@ export const mapHandsLandmarksToGesture = (handsLandmarks) => {
     return createEmptyGestureSignal('未检测到手')
   }
 
-  if (handsLandmarks.length < 2) {
-    return mapHandLandmarksToGesture(handsLandmarks[0])
-  }
-
-  const [firstHand, secondHand] = handsLandmarks
-  if (!Array.isArray(firstHand) || !Array.isArray(secondHand) || firstHand.length < 21 || secondHand.length < 21) {
-    return mapHandLandmarksToGesture(firstHand)
-  }
-
-  const first = getPalmCenter(firstHand)
-  const second = getPalmCenter(secondHand)
-  const centerX = (first.x + second.x) / 2
-  const centerY = (first.y + second.y) / 2
-  const handDistance = distance2d(first, second)
-  const baseSignal = mapHandLandmarksToGesture(firstHand)
-  const spreadStrength = clamp((handDistance - 0.22) * 2.4, 0, 1)
-
-  return {
-    ...baseSignal,
-    rotateX: amplify(applyDeadZone(clamp((0.5 - centerY) * 2.1, -1, 1))),
-    rotateY: amplify(applyDeadZone(clamp((centerX - 0.5) * 2.1, -1, 1))),
-    zoomDelta: clamp((handDistance - 0.34) * 2.2, -0.25, 0.46),
-    disturbance: Math.max(baseSignal.disturbance, spreadStrength),
-    effect: 'spreadDepth',
-    effectStrength: Math.max(0.35, spreadStrength),
-    label: '双手拉开：光轨放大与景深增强',
-  }
+  return mapHandLandmarksToGesture(handsLandmarks[0])
 }
