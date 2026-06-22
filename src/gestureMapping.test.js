@@ -44,6 +44,12 @@ const makeLandmarks = ({ thumb = false, index = false, middle = false, ring = fa
   return points
 }
 
+const scaleLandmarks = (landmarks, scale) => landmarks.map((point) => ({
+  x: 0.5 + (point.x - 0.5) * scale,
+  y: 0.5 + (point.y - 0.5) * scale,
+  z: point.z,
+}))
+
 describe('mapHandLandmarksToGesture', () => {
   it('空输入返回未检测到手', () => {
     expect(mapHandLandmarksToGesture(null)).toEqual(createEmptyGestureSignal('未检测到手'))
@@ -77,6 +83,18 @@ describe('mapHandLandmarksToGesture', () => {
     const signal = mapHandLandmarksToGesture(makeLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true, closedFive: true }))
     expect(signal.raisedCount).toBe(5)
     expect(signal.action).toBe('zoomIn')
+  })
+
+  it('closed five fingers stays zoom in when the hand is farther away', () => {
+    const signal = mapHandLandmarksToGesture(scaleLandmarks(makeLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true, closedFive: true }), 0.7))
+    expect(signal.raisedCount).toBe(5)
+    expect(signal.action).toBe('zoomIn')
+  })
+
+  it('open five fingers stays fingers-5 when the hand is closer', () => {
+    const signal = mapHandLandmarksToGesture(scaleLandmarks(makeLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true, pinch: 0.3 }), 1.25))
+    expect(signal.raisedCount).toBe(5)
+    expect(signal.action).toBe('fingers-5')
   })
 
   it('拇指加食指捏合时识别为缩小', () => {

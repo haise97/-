@@ -17,7 +17,7 @@ const fingerStates = (landmarks) => {
   const wrist = landmarks[0]
   const thumbTip = landmarks[4]
   const thumbIp = landmarks[3]
-  const thumbMcp = landmarks[2]
+  const indexMcp = landmarks[5]
   const indexTip = landmarks[8]
   const indexPip = landmarks[6]
   const middleTip = landmarks[12]
@@ -28,7 +28,8 @@ const fingerStates = (landmarks) => {
   const pinkyPip = landmarks[18]
 
   return {
-    thumb: distance2d(thumbTip, wrist) > distance2d(thumbIp, wrist) + 0.05 || thumbTip.x > thumbMcp.x + 0.06,
+    thumb: distance2d(thumbTip, wrist) > distance2d(thumbIp, wrist) + 0.035
+      || distance2d(thumbTip, indexMcp) > distance2d(thumbIp, indexMcp) + 0.035,
     index: indexTip.y < indexPip.y - 0.04,
     middle: middleTip.y < middlePip.y - 0.04,
     ring: ringTip.y < ringPip.y - 0.04,
@@ -40,6 +41,28 @@ const countRaisedFingers = (states) => ['thumb', 'index', 'middle', 'ring', 'pin
   (count, key) => count + (states[key] ? 1 : 0),
   0,
 )
+
+const getFingerSpreadMetrics = (landmarks) => {
+  const tips = [landmarks[8], landmarks[12], landmarks[16], landmarks[20]]
+  const palmWidth = Math.max(distance2d(landmarks[5], landmarks[17]), 0.001)
+  const adjacentGap = (
+    distance2d(tips[0], tips[1])
+    + distance2d(tips[1], tips[2])
+    + distance2d(tips[2], tips[3])
+  ) / 3 / palmWidth
+  let span = 0
+
+  for (let a = 0; a < tips.length; a += 1) {
+    for (let b = a + 1; b < tips.length; b += 1) {
+      span = Math.max(span, distance2d(tips[a], tips[b]))
+    }
+  }
+
+  return {
+    adjacentGap,
+    span: span / palmWidth,
+  }
+}
 
 const getPalmCenter = (landmarks) => {
   const wrist = landmarks[0]
@@ -85,13 +108,10 @@ export const mapHandLandmarksToGesture = (landmarks) => {
   const rotateY = amplify(applyDeadZone(rawRotateY))
   const rotateX = amplify(applyDeadZone(rawRotateX))
   const pinchDistance = distance2d(landmarks[4], landmarks[8])
-  const tipXs = [landmarks[4].x, landmarks[8].x, landmarks[12].x, landmarks[16].x, landmarks[20].x]
-  const tipYs = [landmarks[4].y, landmarks[8].y, landmarks[12].y, landmarks[16].y, landmarks[20].y]
-  const tipSpan = Math.max(...tipXs) - Math.min(...tipXs)
-  const tipHeightSpan = Math.max(...tipYs) - Math.min(...tipYs)
+  const fingerSpread = getFingerSpreadMetrics(landmarks)
   const isFist = raisedCount === 0
   const isPinch = pinchDistance < 0.055 && raisedCount <= 2 && !states.middle && !states.ring && !states.pinky
-  const isClosedFive = raisedCount === 5 && tipSpan < 0.16 && tipHeightSpan < 0.24
+  const isClosedFive = raisedCount === 5 && fingerSpread.adjacentGap < 0.58 && fingerSpread.span < 1.45
 
   let action = 'idle'
   let label = makeFingerLabel(raisedCount)
