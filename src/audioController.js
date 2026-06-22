@@ -23,7 +23,9 @@ export class AudioController {
     this.analyser = null
     this.data = null
     this.frame = null
-    this.smoothed = { bass: 0, mids: 0, highs: 0, energy: 0 }
+    this.smoothed = { bass: 0, mids: 0, highs: 0, energy: 0, beat: 0, drop: 0 }
+    this.beatHistory = []
+    this.lastBeatAt = 0
   }
 
   ensureGraph() {
@@ -58,12 +60,29 @@ export class AudioController {
       highs: averageBand(this.data, 96, 240),
       energy: averageBand(this.data, 2, 240),
     }
+    this.beatHistory.push(next.bass)
+    if (this.beatHistory.length > 34) {
+      this.beatHistory.shift()
+    }
+
+    const averageBass = this.beatHistory.reduce((sum, value) => sum + value, 0) / this.beatHistory.length
+    const now = performance.now()
+    const punch = Math.max(0, next.bass - averageBass)
+    const canBeat = now - this.lastBeatAt > 185
+    const beat = canBeat && next.bass > 0.16 && punch > 0.055 ? Math.min(1, punch * 5.5 + next.energy * 0.5) : 0
+    const drop = beat > 0 && next.energy > 0.18 && next.mids > 0.12 ? Math.min(1, beat * 0.7 + next.highs * 0.65) : 0
+
+    if (beat > 0) {
+      this.lastBeatAt = now
+    }
 
     this.smoothed = {
-      bass: this.smoothed.bass + (next.bass - this.smoothed.bass) * 0.28,
-      mids: this.smoothed.mids + (next.mids - this.smoothed.mids) * 0.24,
-      highs: this.smoothed.highs + (next.highs - this.smoothed.highs) * 0.2,
-      energy: this.smoothed.energy + (next.energy - this.smoothed.energy) * 0.22,
+      bass: this.smoothed.bass + (next.bass - this.smoothed.bass) * 0.34,
+      mids: this.smoothed.mids + (next.mids - this.smoothed.mids) * 0.28,
+      highs: this.smoothed.highs + (next.highs - this.smoothed.highs) * 0.24,
+      energy: this.smoothed.energy + (next.energy - this.smoothed.energy) * 0.3,
+      beat: Math.max(beat, this.smoothed.beat * 0.74),
+      drop: Math.max(drop, this.smoothed.drop * 0.68),
     }
 
     this.onLevel?.(this.smoothed)
@@ -89,7 +108,7 @@ export class AudioController {
       cancelAnimationFrame(this.frame)
       this.frame = null
     }
-    this.onLevel?.({ bass: 0, mids: 0, highs: 0, energy: 0 })
+    this.onLevel?.({ bass: 0, mids: 0, highs: 0, energy: 0, beat: 0, drop: 0 })
     this.onState?.({ playing: false })
     return false
   }

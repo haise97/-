@@ -35,8 +35,9 @@ export class ParticleScene {
     this.transition = null
     this.disturbance = 0
     this.paused = false
-    this.audioLevel = { bass: 0, mids: 0, highs: 0, energy: 0 }
-    this.audioPulse = { bass: 0, mids: 0, highs: 0, energy: 0 }
+    this.audioLevel = { bass: 0, mids: 0, highs: 0, energy: 0, beat: 0, drop: 0 }
+    this.audioPulse = { bass: 0, mids: 0, highs: 0, energy: 0, beat: 0, drop: 0 }
+    this.audioScaleApplied = 1
     this.fingerAction = 'idle'
     this.fingerActionTarget = 'idle'
     this.fingerActionStrength = 0
@@ -450,6 +451,8 @@ export class ParticleScene {
       mids: clamp(level.mids || 0, 0, 1),
       highs: clamp(level.highs || 0, 0, 1),
       energy: clamp(level.energy || 0, 0, 1),
+      beat: clamp(level.beat || 0, 0, 1),
+      drop: clamp(level.drop || 0, 0, 1),
     }
   }
 
@@ -616,27 +619,41 @@ export class ParticleScene {
     this.audioPulse.mids += (this.audioLevel.mids - this.audioPulse.mids) * 0.16
     this.audioPulse.highs += (this.audioLevel.highs - this.audioPulse.highs) * 0.14
     this.audioPulse.energy += (this.audioLevel.energy - this.audioPulse.energy) * 0.16
+    this.audioPulse.beat = Math.max(this.audioLevel.beat, this.audioPulse.beat * 0.78)
+    this.audioPulse.drop = Math.max(this.audioLevel.drop, this.audioPulse.drop * 0.7)
 
     const bass = this.audioPulse.bass
     const mids = this.audioPulse.mids
     const highs = this.audioPulse.highs
     const energy = this.audioPulse.energy
+    const beat = this.audioPulse.beat
+    const drop = this.audioPulse.drop
 
-    if (energy < 0.006) return
+    if (this.audioScaleApplied !== 1) {
+      this.points.scale.divideScalar(this.audioScaleApplied)
+      this.audioScaleApplied = 1
+    }
 
-    const breath = 1 + bass * 0.34 + energy * 0.18
-    const shimmer = 1 + highs * 1.65
-    this.points.scale.multiplyScalar(breath)
-    this.points.rotation.y += (0.004 + mids * 0.035) * this.settings.speed
-    this.points.rotation.z += Math.sin(elapsed * 2.6) * highs * 0.012
-    this.material.opacity = Math.min(1, this.material.opacity + highs * 0.32 + energy * 0.12)
+    if (energy < 0.006) {
+      return
+    }
+
+    const breath = 1 + bass * 0.48 + energy * 0.22 + beat * 0.42 + drop * 0.72
+    const shimmer = 1 + highs * 2.15 + beat * 1.4 + drop * 2.4
+    this.audioScaleApplied = breath
+    this.points.scale.multiplyScalar(this.audioScaleApplied)
+    this.points.rotation.y += (0.006 + mids * 0.05 + beat * 0.065) * this.settings.speed
+    this.points.rotation.z += Math.sin(elapsed * 2.6) * highs * 0.016 + beat * 0.026
+    this.subjectGroup.rotation.z += Math.sin(elapsed * 9) * beat * 0.026
+    this.material.opacity = Math.min(1, this.material.opacity + highs * 0.42 + energy * 0.16 + beat * 0.34 + drop * 0.4)
     this.material.size = Math.max(this.material.size, this.settings.size * shimmer)
-    this.disturbance = Math.max(this.disturbance, bass * 0.45 + energy * 0.18)
+    this.disturbance = Math.max(this.disturbance, bass * 0.58 + energy * 0.24 + beat * 0.85 + drop)
 
     if (this.settings.mode === 'heroine') {
-      this.heroineFx.spreadTarget = Math.max(this.heroineFx.spreadTarget, bass * 0.58)
-      this.heroineFx.pulseTarget = Math.max(this.heroineFx.pulseTarget, energy * 0.66)
-      this.heroineFx.spinTarget = Math.max(this.heroineFx.spinTarget, mids * 0.42)
+      this.heroineFx.spreadTarget = Math.max(this.heroineFx.spreadTarget, bass * 0.68 + beat * 0.44 + drop * 0.62)
+      this.heroineFx.pulseTarget = Math.max(this.heroineFx.pulseTarget, energy * 0.72 + beat * 0.38 + drop * 0.42)
+      this.heroineFx.spinTarget = Math.max(this.heroineFx.spinTarget, mids * 0.48 + beat * 0.36)
+      this.heroineFx.scaleTarget = Math.max(this.heroineFx.scaleTarget, beat * 0.08 + drop * 0.12)
     }
   }
 
