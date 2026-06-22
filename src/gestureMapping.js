@@ -86,10 +86,12 @@ export const mapHandLandmarksToGesture = (landmarks) => {
   const rotateX = amplify(applyDeadZone(rawRotateX))
   const pinchDistance = distance2d(landmarks[4], landmarks[8])
   const tipXs = [landmarks[4].x, landmarks[8].x, landmarks[12].x, landmarks[16].x, landmarks[20].x]
+  const tipYs = [landmarks[4].y, landmarks[8].y, landmarks[12].y, landmarks[16].y, landmarks[20].y]
   const tipSpan = Math.max(...tipXs) - Math.min(...tipXs)
+  const tipHeightSpan = Math.max(...tipYs) - Math.min(...tipYs)
   const isFist = raisedCount === 0
-  const isPinch = states.thumb && states.index && pinchDistance < 0.04 && !states.middle && !states.ring && !states.pinky
-  const isOpenPalm = raisedCount === 5 && tipSpan < 0.16
+  const isPinch = pinchDistance < 0.055 && raisedCount <= 2 && !states.middle && !states.ring && !states.pinky
+  const isClosedFive = raisedCount === 5 && tipSpan < 0.16 && tipHeightSpan < 0.24
 
   let action = 'idle'
   let label = makeFingerLabel(raisedCount)
@@ -100,9 +102,9 @@ export const mapHandLandmarksToGesture = (landmarks) => {
   } else if (isPinch) {
     action = 'shrink'
     label = '拇指+食指捏合：缩小'
-  } else if (isOpenPalm) {
+  } else if (isClosedFive) {
     action = 'zoomIn'
-    label = '五指张开：放大'
+    label = '五指并拢：放大'
   } else {
     action = `fingers-${raisedCount}`
     label = makeFingerLabel(raisedCount)

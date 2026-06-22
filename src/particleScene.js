@@ -39,6 +39,7 @@ export class ParticleScene {
     this.fingerActionTarget = 'idle'
     this.fingerActionStrength = 0
     this.fingerActionTargetStrength = 0
+    this.fingerBurst = 0
     this.heroineFx = {
       spread: 0,
       spreadTarget: 0,
@@ -431,6 +432,11 @@ export class ParticleScene {
     this.heroineFx.spinTarget = 0
     this.heroineFx.pulseTarget = 0
     this.heroineFx.scaleTarget = 0
+    this.fingerAction = 'idle'
+    this.fingerActionTarget = 'idle'
+    this.fingerActionStrength = 0
+    this.fingerActionTargetStrength = 0
+    this.fingerBurst = 0
     this.rotationVelocity.set(0.002, 0.004)
     this.targetZoom = 8
     this.currentZoom = 8
@@ -439,7 +445,11 @@ export class ParticleScene {
   applyGesture(signal) {
     if (!signal?.active) return
     this.paused = Boolean(signal.paused)
-    this.fingerActionTarget = signal.action || 'idle'
+    const nextFingerAction = signal.action || 'idle'
+    if (nextFingerAction !== this.fingerActionTarget) {
+      this.fingerBurst = 1
+    }
+    this.fingerActionTarget = nextFingerAction
     this.fingerActionTargetStrength = Math.min(1, Math.max(0, (signal.raisedCount || 0) / 5))
     const motion = applyGestureMotion({ x: this.rotationVelocity.x, y: this.rotationVelocity.y }, signal)
     this.rotationVelocity.x = motion.velocity.x
@@ -545,23 +555,48 @@ export class ParticleScene {
   updateFingerAction(elapsed) {
     this.fingerActionStrength += (this.fingerActionTargetStrength - this.fingerActionStrength) * 0.16
     this.fingerActionTargetStrength *= 0.95
+    this.fingerBurst *= 0.9
     this.fingerAction = this.fingerActionTarget
 
-    const pulse = Math.sin(elapsed * (2.5 + this.fingerActionStrength * 2)) * 0.5 + 0.5
-    const actionScale = 1 + this.fingerActionStrength * 0.1 + pulse * 0.03
+    const strength = clamp(this.fingerActionStrength, 0, 1)
+    const burst = clamp(this.fingerBurst, 0, 1)
+    const pulse = Math.sin(elapsed * (3.5 + strength * 5)) * 0.5 + 0.5
+    const wave = Math.sin(elapsed * 8)
 
     if (this.fingerAction === 'fingers-1') {
-      this.points.rotation.z += 0.003
-      this.material.opacity = Math.min(0.98, this.material.opacity + 0.004)
+      this.points.rotation.z += (0.018 + burst * 0.04) * this.settings.speed
+      this.points.rotation.y += 0.01 * this.settings.speed
+      this.subjectGroup.rotation.z = Math.sin(elapsed * 3.2) * (0.08 + burst * 0.08)
+      this.material.opacity = Math.min(1, 0.74 + pulse * 0.24 + burst * 0.2)
+      this.material.size = this.settings.size * (1.2 + pulse * 0.55 + burst * 1.05)
     } else if (this.fingerAction === 'fingers-2') {
-      this.points.scale.setScalar(actionScale)
+      const split = 1 + strength * 0.55 + burst * 0.45
+      this.points.scale.set(split, 0.76 + pulse * 0.18, 1.08 + strength * 0.5)
+      this.points.rotation.x += 0.02 * this.settings.speed
+      this.points.rotation.y -= 0.026 * this.settings.speed
+      this.material.opacity = Math.min(1, 0.64 + pulse * 0.28 + burst * 0.18)
+      this.disturbance = Math.max(this.disturbance, 0.38 + burst * 0.32)
     } else if (this.fingerAction === 'fingers-3') {
-      this.subjectGroup.rotation.z += 0.002
+      this.subjectGroup.rotation.z = wave * (0.18 + strength * 0.16)
+      this.subjectGroup.rotation.y += (0.026 + burst * 0.035) * this.settings.speed
+      this.heroineFigure.rotation.x = Math.sin(elapsed * 5.4) * (0.08 + burst * 0.04)
+      this.heroineFx.spinTarget = Math.max(this.heroineFx.spinTarget, 0.48 + burst * 0.38)
+      this.heroineFx.pulseTarget = Math.max(this.heroineFx.pulseTarget, 0.34 + burst * 0.25)
     } else if (this.fingerAction === 'fingers-4') {
-      this.camera.position.z += Math.sin(elapsed * 3.2) * 0.01
+      const depth = Math.sin(elapsed * 5.6) * (0.22 + strength * 0.28 + burst * 0.24)
+      this.camera.position.z += depth
+      this.points.scale.set(0.88 + pulse * 0.16, 0.88 + pulse * 0.16, 1.35 + pulse * 0.55 + burst * 0.4)
+      this.heroineFx.pulseTarget = Math.max(this.heroineFx.pulseTarget, 0.72 + burst * 0.22)
+      this.heroineFx.scaleTarget = Math.max(this.heroineFx.scaleTarget, 0.09 + burst * 0.08)
+      this.material.size = this.settings.size * (1.25 + pulse * 0.7)
     } else if (this.fingerAction === 'fingers-5') {
-      this.heroineFigure.rotation.y += 0.004
-      this.heroineFx.spreadTarget = Math.max(this.heroineFx.spreadTarget, 0.35)
+      this.heroineFigure.rotation.y += (0.04 + burst * 0.05) * this.settings.speed
+      this.points.rotation.y += (0.035 + burst * 0.04) * this.settings.speed
+      this.heroineFx.spreadTarget = Math.max(this.heroineFx.spreadTarget, 0.85 + burst * 0.15)
+      this.heroineFx.spinTarget = Math.max(this.heroineFx.spinTarget, 0.72 + burst * 0.22)
+      this.heroineFx.pulseTarget = Math.max(this.heroineFx.pulseTarget, 0.58 + burst * 0.22)
+      this.material.opacity = Math.min(1, 0.82 + pulse * 0.18)
+      this.material.size = this.settings.size * (1.45 + pulse * 0.8 + burst * 0.75)
     }
   }
 
