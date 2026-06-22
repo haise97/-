@@ -27,11 +27,11 @@ const fingerStates = (landmarks) => {
   const pinkyPip = landmarks[18]
 
   return {
-    thumb: thumbTip.x > thumbIp.x + 0.06 || thumbTip.y < thumbIp.y - 0.03,
-    index: indexTip.y < indexPip.y - 0.025,
-    middle: middleTip.y < middlePip.y - 0.025,
-    ring: ringTip.y < ringPip.y - 0.025,
-    pinky: pinkyTip.y < pinkyPip.y - 0.025,
+    thumb: thumbTip.x > thumbIp.x + 0.08 || thumbTip.y < thumbIp.y - 0.04,
+    index: indexTip.y < indexPip.y - 0.03,
+    middle: middleTip.y < middlePip.y - 0.03,
+    ring: ringTip.y < ringPip.y - 0.03,
+    pinky: pinkyTip.y < pinkyPip.y - 0.03,
   }
 }
 
@@ -87,8 +87,8 @@ export const mapHandLandmarksToGesture = (landmarks) => {
   const tipXs = [landmarks[4].x, landmarks[8].x, landmarks[12].x, landmarks[16].x, landmarks[20].x]
   const tipSpan = Math.max(...tipXs) - Math.min(...tipXs)
   const isFist = raisedCount === 0
-  const isOpenPalm = raisedCount === 5 && tipSpan < 0.18
-  const isPinch = states.thumb && pinchDistance < 0.055 && !states.middle && !states.ring && !states.pinky
+  const isPinch = states.thumb && states.index && pinchDistance < 0.04 && !states.middle && !states.ring && !states.pinky
+  const isOpenPalm = raisedCount === 5 && tipSpan < 0.14
 
   let action = 'idle'
   let label = makeFingerLabel(raisedCount)
@@ -96,12 +96,12 @@ export const mapHandLandmarksToGesture = (landmarks) => {
   if (isFist) {
     action = 'pause'
     label = '拳头：暂停动画'
-  } else if (isOpenPalm) {
-    action = 'zoomIn'
-    label = '五指张开：放大'
   } else if (isPinch) {
     action = 'shrink'
     label = '拇指+食指捏合：缩小'
+  } else if (isOpenPalm) {
+    action = 'zoomIn'
+    label = '五指张开：放大'
   } else {
     action = `fingers-${raisedCount}`
     label = makeFingerLabel(raisedCount)

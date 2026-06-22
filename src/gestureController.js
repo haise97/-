@@ -77,12 +77,18 @@ const loadMediaPipe = async () => {
   hands.setOptions({
     maxNumHands: 2,
     modelComplexity: 1,
-    minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.55,
+    minDetectionConfidence: 0.72,
+    minTrackingConfidence: 0.7,
   })
 
   await hands.initialize()
   return hands
+}
+
+const normalizeAction = (signal) => {
+  if (!signal?.active) return 'idle'
+  if (signal.paused) return 'pause'
+  return signal.action || 'idle'
 }
 
 export class GestureController {
@@ -97,6 +103,9 @@ export class GestureController {
     this.frameRequest = null
     this.sendingFrame = false
     this.smoothedSignal = createEmptyGestureSignal('未开启')
+    this.stableAction = 'idle'
+    this.stableFrames = 0
+    this.lastDispatchAt = 0
   }
 
   async toggle() {
@@ -118,7 +127,7 @@ export class GestureController {
       this.onStatus?.(createEmptyGestureSignal('1/3 正在请求摄像头权限'))
       this.stream = await requestCameraStream()
 
-      this.onStatus?.(createEmptyGestureSignal('2/3 摄像头已启动，准备画面'))
+      this.onStatus?.(createEmptyGestureSignal('2/3 摄像头已启用，开始识别手势'))
       this.video.srcObject = this.stream
       this.video.muted = true
       this.video.playsInline = true
@@ -132,7 +141,7 @@ export class GestureController {
 
       await waitForVideoReady(this.video)
 
-      this.onStatus?.(createEmptyGestureSignal('3/3 正在下载并加载手势识别模型（首次约需10-60秒）'))
+      this.onStatus?.(createEmptyGestureSignal('3/3 正在加载手势识别模型（首次约需10-60秒）'))
       this.hands = await loadMediaPipe()
 
       this.hands.onResults((results) => this.handleResults(results))
@@ -142,7 +151,7 @@ export class GestureController {
     } catch (error) {
       this.stopTracks()
       this.enabled = false
-      const raw = error?.message ? `（${error.name}：${String(error.message).slice(0, 40)}）` : ''
+      const raw = error?.message ? `（${error.name}）${String(error.message).slice(0, 40)}` : ''
       this.onStatus?.(createEmptyGestureSignal(getCameraErrorLabel(error) + raw))
       throw error
     }
@@ -160,7 +169,7 @@ export class GestureController {
 
     try {
       await this.hands.send({ image: this.video })
-    } catch (error) {
+    } catch {
       this.onStatus?.(createEmptyGestureSignal('手势识别运行失败'))
     } finally {
       this.sendingFrame = false
@@ -191,6 +200,8 @@ export class GestureController {
   stop() {
     this.enabled = false
     this.stopTracks()
+    this.stableAction = 'idle'
+    this.stableFrames = 0
     this.onSignal?.(createEmptyGestureSignal('未开启'))
     this.onStatus?.(createEmptyGestureSignal('未开启'))
   }
@@ -198,9 +209,10 @@ export class GestureController {
   handleResults(results) {
     const signal = mapHandsLandmarksToGesture(results.multiHandLandmarks)
     const now = performance.now()
+    const nextAction = normalizeAction(signal)
 
     if (signal.active) {
-      const alpha = this.smoothedSignal.active ? 0.32 : 1
+      const alpha = this.smoothedSignal.active ? 0.2 : 1
       this.smoothedSignal = {
         ...signal,
         rotateX: this.smoothedSignal.rotateX + (signal.rotateX - this.smoothedSignal.rotateX) * alpha,
@@ -209,15 +221,41 @@ export class GestureController {
         disturbance: Math.max(signal.disturbance, this.smoothedSignal.disturbance * 0.88),
         effect: signal.effect,
         effectStrength: this.smoothedSignal.effectStrength + (signal.effectStrength - this.smoothedSignal.effectStrength) * alpha,
+        paused: signal.paused,
+        action: signal.action,
+        raisedCount: signal.raisedCount,
+        fingerStates: signal.fingerStates,
       }
     } else {
       this.smoothedSignal = signal
+      this.stableAction = 'idle'
+      this.stableFrames = 0
     }
 
-    if (this.smoothedSignal.active || now - this.lastSignalAt > 250) {
+    if (!signal.active) {
+      if (now - this.lastSignalAt > 250) {
+        this.onSignal?.(this.smoothedSignal)
+        this.onStatus?.(this.smoothedSignal)
+        this.lastSignalAt = now
+      }
+      return
+    }
+
+    if (nextAction === this.stableAction) {
+      this.stableFrames += 1
+    } else {
+      this.stableAction = nextAction
+      this.stableFrames = 1
+    }
+
+    const stableEnough = this.stableFrames >= 3
+    const cooledDown = now - this.lastDispatchAt > 180
+
+    if ((stableEnough && cooledDown) || nextAction === 'pause') {
       this.onSignal?.(this.smoothedSignal)
       this.onStatus?.(this.smoothedSignal)
       this.lastSignalAt = now
+      this.lastDispatchAt = now
     }
   }
 }
