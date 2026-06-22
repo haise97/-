@@ -1,0 +1,21 @@
+{
+  "name": "particle-gesture-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "three": "^0.166.1",
+    "vite": "^5.4.11"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.5"
+  }
+}

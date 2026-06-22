@@ -1,0 +1,10 @@
+node_modules/
+dist/
+99_codex_work_artifacts/
+.superpowers/
+.trae/
+
+.DS_Store
+Thumbs.db
+*.log
+share_*.mp4

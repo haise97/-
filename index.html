@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Particle Gesture Lab</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="particle-canvas" aria-label="3D 粒子视觉交互画布"></canvas>
+
+      <section class="hud top-left" aria-label="当前体验状态">
+        <span class="eyebrow">PARTICLE GESTURE LAB</span>
+        <h1 id="mode-title">粒子超立方</h1>
+        <p id="status-text">拖拽旋转，滚轮缩放，或开启摄像头手势。</p>
+      </section>
+
+      <aside class="panel" aria-label="粒子控制面板">
+        <div class="panel-header">
+          <div>
+            <span class="eyebrow">CONTROL MATRIX</span>
+            <h2>视觉控制台</h2>
+          </div>
+          <button id="collapse-panel" class="ghost-button" type="button">收起</button>
+        </div>
+
+        <div class="control-group">
+          <label>形态选择</label>
+          <div class="segmented" role="group" aria-label="形态选择">
+            <button class="mode-button active" type="button" data-mode="hypercube">超立方</button>
+            <button class="mode-button" type="button" data-mode="dna">DNA</button>
+            <button class="mode-button" type="button" data-mode="blackhole">黑洞</button>
+            <button class="mode-button" type="button" data-mode="heroine">国风女主</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="particle-count">粒子数量 <output id="particle-count-value">7000</output></label>
+          <input id="particle-count" type="range" min="1500" max="16000" step="500" value="7000" />
+        </div>
+
+        <div class="control-group">
+          <label for="particle-size">粒子大小 <output id="particle-size-value">0.035</output></label>
+          <input id="particle-size" type="range" min="0.01" max="0.09" step="0.005" value="0.035" />
+        </div>
+
+        <div class="control-group">
+          <label for="animation-speed">动画速度 <output id="animation-speed-value">1.00</output></label>
+          <input id="animation-speed" type="range" min="0.2" max="2.5" step="0.05" value="1" />
+        </div>
+
+        <div class="control-group">
+          <label for="theme-select">颜色主题</label>
+          <select id="theme-select">
+            <option value="neon">霓虹紫青</option>
+            <option value="plasma">红白等离子</option>
+            <option value="ice">冰蓝星尘</option>
+          </select>
+        </div>
+
+        <div class="control-grid">
+          <button id="randomize" class="primary-button" type="button">一键随机</button>
+          <button id="reset-view" class="secondary-button" type="button">重置视角</button>
+        </div>
+
+        <div class="gesture-card">
+          <div>
+            <span class="eyebrow">CAMERA GESTURE</span>
+            <strong id="gesture-label">未开启</strong>
+            <p>摄像头只在本地浏览器用于识别手势。</p>
+          </div>
+          <button id="toggle-gesture" class="primary-button" type="button">开启手势</button>
+        </div>
+      </aside>
+
+      <button id="open-panel" class="floating-panel-button" type="button">控制台</button>
+
+      <div class="camera-preview" id="camera-preview" aria-label="摄像头预览">
+        <video id="camera-video" playsinline muted></video>
+        <div class="scan-line"></div>
+      </div>
+
+      <div class="hud bottom-left">
+        <span id="hint-text">双击重置视角 · 触摸拖动旋转 · 捏合缩放</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
