@@ -1,6 +1,6 @@
 import { THEMES } from './shapes.js'
 
-export const createUiController = ({ settings, scene, onModeChange, onGestureToggle }) => {
+export const createUiController = ({ settings, scene, onModeChange, onAudioToggle, onVolumeChange, onGestureToggle }) => {
   const elements = {
     modeTitle: document.querySelector('#mode-title'),
     statusText: document.querySelector('#status-text'),
@@ -18,6 +18,10 @@ export const createUiController = ({ settings, scene, onModeChange, onGestureTog
     theme: document.querySelector('#theme-select'),
     randomize: document.querySelector('#randomize'),
     resetView: document.querySelector('#reset-view'),
+    toggleMusic: document.querySelector('#toggle-music'),
+    musicLabel: document.querySelector('#music-label'),
+    musicVolume: document.querySelector('#music-volume'),
+    musicVolumeValue: document.querySelector('#music-volume-value'),
     toggleGesture: document.querySelector('#toggle-gesture'),
     gestureLabel: document.querySelector('#gesture-label'),
   }
@@ -76,6 +80,27 @@ export const createUiController = ({ settings, scene, onModeChange, onGestureTog
   })
 
   elements.resetView.addEventListener('click', () => scene.resetView())
+
+  elements.toggleMusic.addEventListener('click', async () => {
+    if (elements.toggleMusic.disabled) return
+    elements.toggleMusic.disabled = true
+
+    try {
+      const playing = await onAudioToggle()
+      elements.toggleMusic.textContent = playing ? '暂停 BGM' : '播放 BGM'
+      elements.musicLabel.textContent = playing ? '节奏粒子运行中' : '节奏粒子未开启'
+    } catch {
+      elements.musicLabel.textContent = 'BGM 启动失败'
+    } finally {
+      elements.toggleMusic.disabled = false
+    }
+  })
+
+  elements.musicVolume.addEventListener('input', () => {
+    const volume = Number(elements.musicVolume.value)
+    elements.musicVolumeValue.value = `${Math.round(volume * 100)}%`
+    onVolumeChange(volume)
+  })
 
   elements.collapsePanel.addEventListener('click', () => {
     elements.panel.classList.add('collapsed')

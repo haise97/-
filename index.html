@@ -63,6 +63,20 @@
           <button id="reset-view" class="secondary-button" type="button">重置视角</button>
         </div>
 
+        <div class="music-card">
+          <div>
+            <span class="eyebrow">BGM REACTIVE</span>
+            <strong id="music-label">节奏粒子未开启</strong>
+            <p>播放 AI BGM 后，粒子会跟随低频呼吸、随高频闪烁，并在鼓点处扩散。</p>
+          </div>
+          <button id="toggle-music" class="primary-button" type="button">播放 BGM</button>
+        </div>
+
+        <div class="control-group compact-control">
+          <label for="music-volume">BGM 音量 <output id="music-volume-value">42%</output></label>
+          <input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.42" />
+        </div>
+
         <div class="gesture-card">
           <div>
             <span class="eyebrow">CAMERA GESTURE</span>

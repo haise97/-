@@ -260,16 +260,38 @@ select {
   background: rgba(0, 0, 0, 0.18);
 }
 
-.gesture-card strong {
+.music-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid rgba(92, 247, 255, 0.16);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(92, 247, 255, 0.12), rgba(180, 92, 255, 0.08));
+}
+
+.gesture-card strong,
+.music-card strong {
   display: block;
   margin-bottom: 6px;
   color: var(--accent-2);
 }
 
-.gesture-card p {
+.gesture-card p,
+.music-card p {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.55;
+}
+
+.music-card button {
+  min-width: 96px;
+}
+
+.compact-control {
+  margin-top: 12px;
 }
 
 .floating-panel-button {
