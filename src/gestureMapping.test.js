@@ -53,6 +53,12 @@ describe('mapHandLandmarksToGesture', () => {
     expect(signal.action).toBe('fingers-1')
   })
 
+  it('只伸两根手指时识别为第二档动作', () => {
+    const signal = mapHandLandmarksToGesture(makeLandmarks({ index: true, pinky: true }))
+    expect(signal.raisedCount).toBe(2)
+    expect(signal.action).toBe('fingers-2')
+  })
+
   it('五指全开时识别为放大', () => {
     const signal = mapHandLandmarksToGesture(makeLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true, pinch: 0.08 }))
     expect(signal.raisedCount).toBe(5)

@@ -35,6 +35,10 @@ export class ParticleScene {
     this.transition = null
     this.disturbance = 0
     this.paused = false
+    this.fingerAction = 'idle'
+    this.fingerActionTarget = 'idle'
+    this.fingerActionStrength = 0
+    this.fingerActionTargetStrength = 0
     this.heroineFx = {
       spread: 0,
       spreadTarget: 0,
@@ -435,6 +439,8 @@ export class ParticleScene {
   applyGesture(signal) {
     if (!signal?.active) return
     this.paused = Boolean(signal.paused)
+    this.fingerActionTarget = signal.action || 'idle'
+    this.fingerActionTargetStrength = Math.min(1, Math.max(0, (signal.raisedCount || 0) / 5))
     const motion = applyGestureMotion({ x: this.rotationVelocity.x, y: this.rotationVelocity.y }, signal)
     this.rotationVelocity.x = motion.velocity.x
     this.rotationVelocity.y = motion.velocity.y
@@ -536,6 +542,29 @@ export class ParticleScene {
     this.material.size = this.settings.size * (visible ? 1 + fx.pulse * 0.45 + fx.spread * 0.22 : 1)
   }
 
+  updateFingerAction(elapsed) {
+    this.fingerActionStrength += (this.fingerActionTargetStrength - this.fingerActionStrength) * 0.16
+    this.fingerActionTargetStrength *= 0.95
+    this.fingerAction = this.fingerActionTarget
+
+    const pulse = Math.sin(elapsed * (2.5 + this.fingerActionStrength * 2)) * 0.5 + 0.5
+    const actionScale = 1 + this.fingerActionStrength * 0.1 + pulse * 0.03
+
+    if (this.fingerAction === 'fingers-1') {
+      this.points.rotation.z += 0.003
+      this.material.opacity = Math.min(0.98, this.material.opacity + 0.004)
+    } else if (this.fingerAction === 'fingers-2') {
+      this.points.scale.setScalar(actionScale)
+    } else if (this.fingerAction === 'fingers-3') {
+      this.subjectGroup.rotation.z += 0.002
+    } else if (this.fingerAction === 'fingers-4') {
+      this.camera.position.z += Math.sin(elapsed * 3.2) * 0.01
+    } else if (this.fingerAction === 'fingers-5') {
+      this.heroineFigure.rotation.y += 0.004
+      this.heroineFx.spreadTarget = Math.max(this.heroineFx.spreadTarget, 0.35)
+    }
+  }
+
   animate = () => {
     const elapsed = this.clock.getElapsedTime()
     this.currentZoom += (this.targetZoom - this.currentZoom) * 0.08
@@ -549,6 +578,7 @@ export class ParticleScene {
       this.heroineFigure.rotation.y = Math.sin(elapsed * 0.33) * 0.035
       this.heroineFigure.rotation.x = Math.cos(elapsed * 0.25) * 0.018
       this.updateHeroineFx(elapsed)
+      this.updateFingerAction(elapsed)
     } else {
       this.rotationVelocity.set(0, 0)
     }

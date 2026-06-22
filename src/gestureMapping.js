@@ -17,6 +17,7 @@ const fingerStates = (landmarks) => {
   const wrist = landmarks[0]
   const thumbTip = landmarks[4]
   const thumbIp = landmarks[3]
+  const thumbMcp = landmarks[2]
   const indexTip = landmarks[8]
   const indexPip = landmarks[6]
   const middleTip = landmarks[12]
@@ -27,11 +28,11 @@ const fingerStates = (landmarks) => {
   const pinkyPip = landmarks[18]
 
   return {
-    thumb: thumbTip.x > thumbIp.x + 0.08 || thumbTip.y < thumbIp.y - 0.04,
-    index: indexTip.y < indexPip.y - 0.03,
-    middle: middleTip.y < middlePip.y - 0.03,
-    ring: ringTip.y < ringPip.y - 0.03,
-    pinky: pinkyTip.y < pinkyPip.y - 0.03,
+    thumb: distance2d(thumbTip, wrist) > distance2d(thumbIp, wrist) + 0.05 || thumbTip.x > thumbMcp.x + 0.06,
+    index: indexTip.y < indexPip.y - 0.04,
+    middle: middleTip.y < middlePip.y - 0.04,
+    ring: ringTip.y < ringPip.y - 0.04,
+    pinky: pinkyTip.y < pinkyPip.y - 0.04,
   }
 }
 
@@ -88,7 +89,7 @@ export const mapHandLandmarksToGesture = (landmarks) => {
   const tipSpan = Math.max(...tipXs) - Math.min(...tipXs)
   const isFist = raisedCount === 0
   const isPinch = states.thumb && states.index && pinchDistance < 0.04 && !states.middle && !states.ring && !states.pinky
-  const isOpenPalm = raisedCount === 5 && tipSpan < 0.14
+  const isOpenPalm = raisedCount === 5 && tipSpan < 0.16
 
   let action = 'idle'
   let label = makeFingerLabel(raisedCount)
